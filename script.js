@@ -1,61 +1,127 @@
-body {
-  font-family: Arial, sans-serif;
-  text-align: center;
-  background-color: #fff0f5;
-  margin: 0;
-  padding: 0;
-}
+window.onload = () => {
 
-.page {
-  padding: 50px 20px;
-}
+  const page1 = document.getElementById("page1");
+  const page2 = document.getElementById("page2");
+  const page3 = document.getElementById("page3");
+  const page4 = document.getElementById("page4");
 
-button {
-  padding: 10px 20px;
-  font-size: 18px;
-  cursor: pointer;
-  background-color: #ffb6c1;
-  border: none;
-  border-radius: 10px;
-  transition: 0.3s;
-}
-button:hover {
-  background-color: #ff69b4;
-}
+  const gameArea = document.getElementById("game-area");
+  const catcher = document.getElementById("catcher");
+  const scoreText = document.getElementById("score");
 
-#game-area {
-  position: relative;
-  width: 90%;
-  max-width: 600px;
-  height: 400px;
-  border: 3px solid #8b4513;
-  margin: 20px auto;
-  overflow: hidden;
-  background-color: #fff8dc;
-  border-radius: 15px;
-  touch-action: none;
-}
+  let score = 0;
+  const target = 15;
+  let gameInterval;
 
-#catcher {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 50px;
-}
+  // --- Move catcher ---
+  function moveCatcher(x) {
+    const rect = gameArea.getBoundingClientRect();
+    let newX = x - rect.left - catcher.offsetWidth/2;
+    if(newX < 0) newX = 0;
+    if(newX > gameArea.offsetWidth - catcher.offsetWidth) newX = gameArea.offsetWidth - catcher.offsetWidth;
+    catcher.style.left = `${newX}px`;
+  }
 
-.chocolate {
-  position: absolute;
-  font-size: 35px;
-}
+  gameArea.addEventListener("mousemove", e => moveCatcher(e.clientX));
+  gameArea.addEventListener("touchmove", e => {
+    e.preventDefault();
+    moveCatcher(e.touches[0].clientX);
+  }, { passive: false });
 
-.final-text {
-  animation: pop 1s ease-in-out forwards;
-}
+  // --- Hearts ---
+  function createHearts(x, y) {
+    for(let i=0;i<5;i++){
+      const heart = document.createElement("div");
+      heart.textContent = "❤️";
+      heart.style.position = "absolute";
+      heart.style.left = x + Math.random()*20 -10 + "px";
+      heart.style.top = y + "px";
+      heart.style.fontSize = "20px";
+      heart.style.opacity = 1;
+      gameArea.appendChild(heart);
 
-@keyframes pop {
-  0% { transform: scale(0); opacity: 0; }
-  50% { transform: scale(1.5); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
+      let top = y;
+      let opacity = 1;
+      const interval = setInterval(()=>{
+        top -= 2;
+        opacity -= 0.03;
+        heart.style.top = top + "px";
+        heart.style.opacity = opacity;
+        if(opacity<=0){ heart.remove(); clearInterval(interval);}
+      },30);
+    }
+  }
 
+  // --- Create chocolate ---
+  function createChocolate() {
+    const choc = document.createElement("div");
+    choc.classList.add("chocolate");
+    choc.textContent = "🍫";
+    choc.style.left = Math.random()*(gameArea.offsetWidth-30)+"px";
+    choc.style.top = "-50px";
+    gameArea.appendChild(choc);
+
+    const fall = setInterval(()=>{
+      let top = parseInt(choc.style.top);
+      top += 5;
+      choc.style.top = top + "px";
+
+      const catcherRect = catcher.getBoundingClientRect();
+      const chocRect = choc.getBoundingClientRect();
+
+      if(!(catcherRect.right < chocRect.left ||
+           catcherRect.left > chocRect.right ||
+           catcherRect.bottom < chocRect.top ||
+           catcherRect.top > chocRect.bottom)){
+        score++;
+        scoreText.textContent = `Chocolates: ${score}/${target}`;
+
+        const splash = document.createElement("div");
+        splash.textContent = "🍫💥";
+        splash.style.position = "absolute";
+        splash.style.left = chocRect.left - gameArea.getBoundingClientRect().left + "px";
+        splash.style.top = chocRect.top - gameArea.getBoundingClientRect().top + "px";
+        splash.style.fontSize = "35px";
+        gameArea.appendChild(splash);
+        setTimeout(()=>splash.remove(),500);
+
+        createHearts(catcherRect.left - gameArea.getBoundingClientRect().left, catcherRect.top - gameArea.getBoundingClientRect().top);
+
+        choc.remove();
+        clearInterval(fall);
+
+        if(score >= target){
+          clearInterval(gameInterval);
+          setTimeout(()=>{
+            page2.style.display = "none";
+            page3.style.display = "block";
+          },500);
+        }
+      }
+
+      if(top > gameArea.offsetHeight){ choc.remove(); clearInterval(fall);}
+    },30);
+  }
+
+  // --- Start game ---
+  function startGame(){
+    score = 0;
+    scoreText.textContent = `Chocolates: 0/${target}`;
+    document.querySelectorAll(".chocolate").forEach(c=>c.remove());
+    gameInterval = setInterval(()=>{
+      if(score < target) createChocolate();
+    },700);
+  }
+
+  // --- Button clicks ---
+  document.getElementById("next1").onclick = ()=>{
+    page1.style.display = "none";
+    page2.style.display = "block";
+    startGame();
+  }
+
+  document.getElementById("next2").onclick = ()=>{
+    page3.style.display = "none";
+    page4.style.display = "block";
+  }
+}
